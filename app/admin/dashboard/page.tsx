@@ -131,16 +131,16 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-indigo-700 text-white">
+      <div style={{ backgroundColor: '#C8102E' }} className="text-white">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold">🎪 Dětské trhy – Admin</h1>
-              <p className="text-sm text-indigo-200">24. května 2026</p>
+              <p className="text-sm text-red-100">24. května 2026</p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center text-sm bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded"
+              className="flex items-center text-sm bg-white/20 hover:bg-white/30 px-3 py-2 rounded transition-colors"
             >
               <LogOut className="w-4 h-4 mr-1" />
               Odhlásit
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`rounded-xl p-4 shadow-sm transition-all ${statusFilter === 'all' ? 'bg-indigo-100 ring-2 ring-indigo-500' : 'bg-white hover:bg-gray-50'}`}
+            className={`rounded-xl p-4 shadow-sm transition-all ${statusFilter === 'all' ? 'bg-red-100 ring-2 ring-red-500' : 'bg-white hover:bg-gray-50'}`}
           >
             <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
             <div className="text-sm text-gray-500">Celkem</div>
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
                 placeholder="Hledat podle jména, emailu, stánku, města..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none"
               />
               {searchQuery && (
                 <button
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
                     <tr key={reg.id} className="hover:bg-gray-50">
                       <td className="px-4 py-4">
                         <div className="font-medium text-gray-800">{reg.child_name}</div>
-                        <div className="text-sm text-purple-600 font-medium">{reg.stall_name}</div>
+                        <div className="text-sm font-medium" style={{ color: '#C8102E' }}>{reg.stall_name}</div>
                         <div className="text-xs text-gray-400">{reg.child_age} let • {reg.city}</div>
                       </td>
                       <td className="px-4 py-4">
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Help */}
-        <div className="mt-6 bg-indigo-50 rounded-xl p-4 text-sm text-indigo-800">
+        <div className="mt-6 rounded-xl p-4 text-sm" style={{ backgroundColor: 'rgba(200, 16, 46, 0.1)', color: '#991b1b' }}>
           <strong>💡 Tip:</strong> Klikněte na <strong>Detail</strong> pro zobrazení všech informací o registraci.
         </div>
       </div>
