@@ -9,6 +9,54 @@ Byl/a jsem informován/a o svých právech – mohu kdykoliv požádat o příst
 
 Rozumím pravidlům dozoru – po dobu aktivit jsem přítomen/a a vykonávám nad dítětem dohled. Pokud dítě svěříme dozorujícím osobám spolku, účastní se aktivit na vlastní odpovědnost.`
 
+// Validation patterns
+const PATTERNS = {
+  name: /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s\-]+$/,
+  phone: /^(\+420)?[0-9]{9}$/,
+  postalCode: /^[0-9]{3}\s?[0-9]{2}$/,
+  address: /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9\s\.\-\/]+$/,
+}
+
+const validateField = (field: string, value: string): string | null => {
+  switch (field) {
+    case 'parentName':
+    case 'childName':
+      if (!value.trim()) return 'Toto pole je povinné'
+      if (value.length < 3) return 'Jméno musí mít alespoň 3 znaky'
+      if (!PATTERNS.name.test(value)) return 'Jméno obsahuje neplatné znaky'
+      return null
+    case 'parentPhone':
+      const cleanPhone = value.replace(/\s/g, '')
+      if (!cleanPhone) return 'Toto pole je povinné'
+      if (!PATTERNS.phone.test(cleanPhone)) return 'Zadejte platné telefonní číslo (9 číslic)'
+      return null
+    case 'addressPostalCode':
+      const cleanPSC = value.replace(/\s/g, '')
+      if (!cleanPSC) return 'Toto pole je povinné'
+      if (!PATTERNS.postalCode.test(value)) return 'PSČ musí být 5 číslic (např. 110 00)'
+      return null
+    case 'addressStreet':
+    case 'addressCity':
+      if (!value.trim()) return 'Toto pole je povinné'
+      if (!PATTERNS.address.test(value)) return 'Pole obsahuje neplatné znaky'
+      return null
+    case 'addressNumber':
+      if (!value.trim()) return 'Toto pole je povinné'
+      if (!/^[0-9a-zA-Z\s\/\-]+$/.test(value)) return 'Číslo popisné obsahuje neplatné znaky'
+      return null
+    case 'parentBirthDate':
+      if (!value) return 'Toto pole je povinné'
+      const birthDate = new Date(value)
+      const today = new Date()
+      const age = today.getFullYear() - birthDate.getFullYear()
+      if (age < 18) return 'Zákonný zástupce musí být starší 18 let'
+      if (age > 120) return 'Zadejte platné datum narození'
+      return null
+    default:
+      return null
+  }
+}
+
 export default function RegistrationPage() {
   const [formData, setFormData] = useState({
     parentName: '',
@@ -25,33 +73,69 @@ export default function RegistrationPage() {
     products: '',
     consentGiven: false
   })
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({})
   const [formSubmitted, setFormSubmitted] = useState(false)
   const [showFullConsent, setShowFullConsent] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const handleFieldChange = (field: string, value: string | boolean) => {
+    setFormData({ ...formData, [field]: value })
+    if (fieldErrors[field]) {
+      setFieldErrors({ ...fieldErrors, [field]: null })
+    }
+  }
+
+  const handleFieldBlur = (field: string, value: string) => {
+    const error = validateField(field, value)
+    setFieldErrors({ ...fieldErrors, [field]: error })
+  }
+
+  const getInputClass = (field: string) => {
+    const baseClass = "w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+    return fieldErrors[field]
+      ? `${baseClass} border-red-500 bg-red-50`
+      : `${baseClass} border-gray-300`
+  }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setError('')
 
+    // Validate all fields
+    const errors: Record<string, string | null> = {}
+    const fieldsToValidate = ['parentName', 'parentPhone', 'parentBirthDate', 'addressStreet', 'addressNumber', 'addressCity', 'addressPostalCode', 'childName']
+
+    for (const field of fieldsToValidate) {
+      const fieldError = validateField(field, formData[field as keyof typeof formData] as string)
+      if (fieldError) errors[field] = fieldError
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setError('Opravte prosím chyby ve formuláři')
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          parent_name: formData.parentName,
-          parent_email: formData.parentEmail,
-          parent_phone: formData.parentPhone,
+          parent_name: formData.parentName.trim(),
+          parent_email: formData.parentEmail.trim(),
+          parent_phone: formData.parentPhone.replace(/\s/g, ''),
           parent_birth_date: formData.parentBirthDate,
-          address_street: formData.addressStreet,
-          address_number: formData.addressNumber,
-          address_city: formData.addressCity,
-          address_postal_code: formData.addressPostalCode,
-          child_name: formData.childName,
+          address_street: formData.addressStreet.trim(),
+          address_number: formData.addressNumber.trim(),
+          address_city: formData.addressCity.trim(),
+          address_postal_code: formData.addressPostalCode.replace(/\s/g, ''),
+          child_name: formData.childName.trim(),
           child_age: parseInt(formData.childAge),
-          stall_name: formData.stallName,
-          products: formData.products,
+          stall_name: formData.stallName.trim(),
+          products: formData.products.trim(),
           consent_given: formData.consentGiven
         })
       })
@@ -87,6 +171,7 @@ export default function RegistrationPage() {
                 addressStreet: '', addressNumber: '', addressCity: '', addressPostalCode: '',
                 childName: '', childAge: '', stallName: '', products: '', consentGiven: false
               })
+              setFieldErrors({})
             }}
             style={{ backgroundColor: '#C8102E' }}
             className="text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
@@ -155,9 +240,11 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.parentName}
-                    onChange={e => setFormData({...formData, parentName: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('parentName', e.target.value)}
+                    onBlur={e => handleFieldBlur('parentName', e.target.value)}
+                    className={getInputClass('parentName')}
                   />
+                  {fieldErrors.parentName && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Datum narození *</label>
@@ -165,9 +252,11 @@ export default function RegistrationPage() {
                     type="date"
                     required
                     value={formData.parentBirthDate}
-                    onChange={e => setFormData({...formData, parentBirthDate: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('parentBirthDate', e.target.value)}
+                    onBlur={e => handleFieldBlur('parentBirthDate', e.target.value)}
+                    className={getInputClass('parentBirthDate')}
                   />
+                  {fieldErrors.parentBirthDate && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentBirthDate}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ulice *</label>
@@ -175,10 +264,12 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.addressStreet}
-                    onChange={e => setFormData({...formData, addressStreet: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('addressStreet', e.target.value)}
+                    onBlur={e => handleFieldBlur('addressStreet', e.target.value)}
+                    className={getInputClass('addressStreet')}
                     placeholder="např. Hlavní"
                   />
+                  {fieldErrors.addressStreet && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressStreet}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Číslo popisné *</label>
@@ -186,10 +277,12 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.addressNumber}
-                    onChange={e => setFormData({...formData, addressNumber: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('addressNumber', e.target.value)}
+                    onBlur={e => handleFieldBlur('addressNumber', e.target.value)}
+                    className={getInputClass('addressNumber')}
                     placeholder="např. 123/4"
                   />
+                  {fieldErrors.addressNumber && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressNumber}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">PSČ *</label>
@@ -197,10 +290,12 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.addressPostalCode}
-                    onChange={e => setFormData({...formData, addressPostalCode: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('addressPostalCode', e.target.value)}
+                    onBlur={e => handleFieldBlur('addressPostalCode', e.target.value)}
+                    className={getInputClass('addressPostalCode')}
                     placeholder="např. 110 00"
                   />
+                  {fieldErrors.addressPostalCode && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressPostalCode}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
@@ -208,10 +303,12 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.addressCity}
-                    onChange={e => setFormData({...formData, addressCity: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('addressCity', e.target.value)}
+                    onBlur={e => handleFieldBlur('addressCity', e.target.value)}
+                    className={getInputClass('addressCity')}
                     placeholder="např. Praha"
                   />
+                  {fieldErrors.addressCity && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressCity}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
@@ -219,7 +316,7 @@ export default function RegistrationPage() {
                     type="email"
                     required
                     value={formData.parentEmail}
-                    onChange={e => setFormData({...formData, parentEmail: e.target.value})}
+                    onChange={e => handleFieldChange('parentEmail', e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                   />
                 </div>
@@ -229,9 +326,12 @@ export default function RegistrationPage() {
                     type="tel"
                     required
                     value={formData.parentPhone}
-                    onChange={e => setFormData({...formData, parentPhone: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('parentPhone', e.target.value)}
+                    onBlur={e => handleFieldBlur('parentPhone', e.target.value)}
+                    className={getInputClass('parentPhone')}
+                    placeholder="např. 602282276"
                   />
+                  {fieldErrors.parentPhone && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentPhone}</p>}
                 </div>
               </div>
             </div>
@@ -249,9 +349,11 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.childName}
-                    onChange={e => setFormData({...formData, childName: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    onChange={e => handleFieldChange('childName', e.target.value)}
+                    onBlur={e => handleFieldBlur('childName', e.target.value)}
+                    className={getInputClass('childName')}
                   />
+                  {fieldErrors.childName && <p className="text-red-500 text-xs mt-1">{fieldErrors.childName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Věk dítěte *</label>
@@ -261,7 +363,7 @@ export default function RegistrationPage() {
                     min="5"
                     max="18"
                     value={formData.childAge}
-                    onChange={e => setFormData({...formData, childAge: e.target.value})}
+                    onChange={e => handleFieldChange('childAge', e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                   />
                 </div>
@@ -281,7 +383,7 @@ export default function RegistrationPage() {
                     type="text"
                     required
                     value={formData.stallName}
-                    onChange={e => setFormData({...formData, stallName: e.target.value})}
+                    onChange={e => handleFieldChange('stallName', e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                     placeholder="např. Tomíkovy výtvory"
                   />
@@ -292,7 +394,7 @@ export default function RegistrationPage() {
                     required
                     rows={3}
                     value={formData.products}
-                    onChange={e => setFormData({...formData, products: e.target.value})}
+                    onChange={e => handleFieldChange('products', e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors resize-none"
                     placeholder="Popište co budete prodávat/nabízet..."
                   />
@@ -309,7 +411,7 @@ export default function RegistrationPage() {
                   required
                   id="consent"
                   checked={formData.consentGiven}
-                  onChange={e => setFormData({...formData, consentGiven: e.target.checked})}
+                  onChange={e => handleFieldChange('consentGiven', e.target.checked)}
                   className="mt-1 w-5 h-5 border-gray-300 rounded focus:ring-red-500 accent-red-600"
                 />
                 <div className="flex-1">
@@ -324,7 +426,7 @@ export default function RegistrationPage() {
                   >
                     {showFullConsent ? 'Skrýt' : 'Zobrazit celé znění'}
                   </button>
-                  
+
                   {showFullConsent && (
                     <div className="mt-3 p-3 bg-white rounded-lg text-xs text-gray-600 border border-gray-200">
                       <div className="font-semibold mb-2 text-gray-800">
@@ -335,7 +437,7 @@ export default function RegistrationPage() {
                   )}
                 </div>
               </div>
-              
+
               <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-600">
                   💰 <strong>Poplatek za stánek:</strong> 500 Kč – vybírá se na místě, až si stánek vydělá.
