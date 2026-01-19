@@ -192,17 +192,6 @@ export default function RegistrationPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.addressCity}
-                    onChange={e => setFormData({...formData, addressCity: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
-                    placeholder="např. Praha"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">PSČ *</label>
                   <input
                     type="text"
@@ -211,6 +200,17 @@ export default function RegistrationPage() {
                     onChange={e => setFormData({...formData, addressPostalCode: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                     placeholder="např. 110 00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.addressCity}
+                    onChange={e => setFormData({...formData, addressCity: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    placeholder="např. Praha"
                   />
                 </div>
                 <div>
