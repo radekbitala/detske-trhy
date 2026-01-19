@@ -122,11 +122,11 @@ export default function RegistrationDetailPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-indigo-700 text-white">
+      <div style={{ backgroundColor: '#C8102E' }} className="text-white">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <button
             onClick={() => router.push('/admin/dashboard')}
-            className="flex items-center text-indigo-200 hover:text-white mb-2"
+            className="flex items-center text-red-100 hover:text-white mb-2"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Zpět na seznam
@@ -173,7 +173,7 @@ export default function RegistrationDetailPage() {
           {/* Zákonný zástupce */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-              <User className="w-5 h-5 mr-2 text-indigo-600" />
+              <User className="w-5 h-5 mr-2" style={{ color: '#C8102E' }} />
               Zákonný zástupce
             </h3>
             <dl className="space-y-3">
@@ -192,7 +192,7 @@ export default function RegistrationDetailPage() {
               <div>
                 <dt className="text-xs text-gray-500 uppercase">E-mail</dt>
                 <dd className="text-gray-800">
-                  <a href={`mailto:${registration.parent_email}`} className="text-indigo-600 hover:underline">
+                  <a href={`mailto:${registration.parent_email}`} style={{ color: '#C8102E' }} className="hover:underline">
                     {registration.parent_email}
                   </a>
                 </dd>
@@ -200,7 +200,7 @@ export default function RegistrationDetailPage() {
               <div>
                 <dt className="text-xs text-gray-500 uppercase">Telefon</dt>
                 <dd className="text-gray-800">
-                  <a href={`tel:${registration.parent_phone}`} className="text-indigo-600 hover:underline">
+                  <a href={`tel:${registration.parent_phone}`} style={{ color: '#C8102E' }} className="hover:underline">
                     {registration.parent_phone}
                   </a>
                 </dd>
@@ -211,7 +211,7 @@ export default function RegistrationDetailPage() {
           {/* Dítě */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-              <Baby className="w-5 h-5 mr-2 text-indigo-600" />
+              <Baby className="w-5 h-5 mr-2" style={{ color: '#C8102E' }} />
               Údaje o dítěti
             </h3>
             <dl className="space-y-3">
@@ -233,7 +233,7 @@ export default function RegistrationDetailPage() {
           {/* Stánek */}
           <div className="bg-white rounded-xl shadow-sm p-6 md:col-span-2">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-indigo-600" />
+              <Package className="w-5 h-5 mr-2" style={{ color: '#C8102E' }} />
               Informace o stánku
             </h3>
             <dl className="space-y-3">
@@ -251,7 +251,7 @@ export default function RegistrationDetailPage() {
           {/* Meta info */}
           <div className="bg-white rounded-xl shadow-sm p-6 md:col-span-2">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-              <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+              <FileText className="w-5 h-5 mr-2" style={{ color: '#C8102E' }} />
               Informace o registraci
             </h3>
             <dl className="grid md:grid-cols-3 gap-4">
