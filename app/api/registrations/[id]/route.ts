@@ -101,7 +101,7 @@ export async function PUT(
       try {
         const template = EMAIL_TEMPLATES[emailType]
         await resend.emails.send({
-          from: 'Dětské trhy <info@calm2be.cz>',
+          from: 'Dětské trhy <onboarding@resend.dev>',
           to: registration.parent_email,
           subject: template.subject,
           html: template.html(registration.child_name)
