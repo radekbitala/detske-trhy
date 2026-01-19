@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, User, Baby, Package, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, User, Baby, Package, FileText, CheckCircle, Trash2 } from 'lucide-react'
 
 interface Registration {
   id: string
@@ -28,6 +28,7 @@ export default function RegistrationDetailPage() {
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const router = useRouter()
   const params = useParams()
 
@@ -84,6 +85,29 @@ export default function RegistrationDetailPage() {
     }
   }
 
+  const handleDelete = async () => {
+    const password = localStorage.getItem('admin_password')
+    setActionLoading(true)
+    
+    try {
+      const response = await fetch(`/api/registrations/${params.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${password}`
+        }
+      })
+
+      if (response.ok) {
+        router.push('/admin/dashboard')
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error)
+    } finally {
+      setActionLoading(false)
+      setDeleteConfirm(false)
+    }
+  }
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('cs-CZ')
@@ -121,6 +145,31 @@ export default function RegistrationDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Smazat registraci?</h3>
+            <p className="text-gray-600 mb-4">Tato akce je nevratná. Opravdu chcete smazat registraci <strong>{registration.child_name}</strong>?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Zrušit
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Mažu...' : 'Smazat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ backgroundColor: '#C8102E' }} className="text-white">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -143,7 +192,7 @@ export default function RegistrationDetailPage() {
               <div className="text-2xl font-bold text-gray-800">{registration.stall_name}</div>
               <div className="text-gray-500">{registration.child_name} ({registration.child_age} let)</div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               {getStatusBadge(registration.status)}
               {registration.status === 'pending' && (
                 <button
@@ -165,6 +214,13 @@ export default function RegistrationDetailPage() {
                   {actionLoading ? 'Zpracovávám...' : 'Schválit video'}
                 </button>
               )}
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 inline mr-1" />
+                Smazat
+              </button>
             </div>
           </div>
         </div>
