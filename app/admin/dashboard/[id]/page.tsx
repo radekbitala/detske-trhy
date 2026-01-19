@@ -11,10 +11,12 @@ interface Registration {
   parent_email: string
   parent_phone: string
   parent_birth_date: string
-  parent_address: string
+  address_street: string
+  address_number: string
+  address_city: string
+  address_postal_code: string
   child_name: string
   child_age: number
-  city: string
   stall_name: string
   products: string
   status: 'pending' | 'theme_approved' | 'video_approved'
@@ -243,7 +245,9 @@ export default function RegistrationDetailPage() {
               </div>
               <div>
                 <dt className="text-xs text-gray-500 uppercase">Adresa</dt>
-                <dd className="text-gray-800">{registration.parent_address || '-'}</dd>
+                <dd className="text-gray-800">
+                  {registration.address_street} {registration.address_number}, {registration.address_city}, {registration.address_postal_code}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-gray-500 uppercase">E-mail</dt>
@@ -278,10 +282,6 @@ export default function RegistrationDetailPage() {
               <div>
                 <dt className="text-xs text-gray-500 uppercase">Věk</dt>
                 <dd className="text-gray-800">{registration.child_age} let</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-gray-500 uppercase">Město</dt>
-                <dd className="text-gray-800">{registration.city}</dd>
               </div>
             </dl>
           </div>

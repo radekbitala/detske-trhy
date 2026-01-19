@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Eye, CheckCircle, LogOut, Trash2 } from 'lucide-react'
+import { Search, X, Eye, CheckCircle, LogOut, Trash2, Download } from 'lucide-react'
 
 interface Registration {
   id: string
@@ -10,9 +10,12 @@ interface Registration {
   parent_name: string
   parent_email: string
   parent_phone: string
+  address_street: string
+  address_number: string
+  address_city: string
+  address_postal_code: string
   child_name: string
   child_age: number
-  city: string
   stall_name: string
   products: string
   status: 'pending' | 'theme_approved' | 'video_approved'
@@ -108,6 +111,66 @@ export default function AdminDashboard() {
     router.push('/admin')
   }
 
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Čeká na schválení',
+      theme_approved: 'Čeká na video',
+      video_approved: 'Schváleno'
+    }
+    return labels[status] || status
+  }
+
+  const handleExportCSV = () => {
+    const dataToExport = filteredRegistrations
+    if (dataToExport.length === 0) return
+
+    const headers = [
+      'Jméno dítěte',
+      'Věk',
+      'Název stánku',
+      'Sortiment',
+      'Jméno rodiče',
+      'Email',
+      'Telefon',
+      'Ulice',
+      'Číslo',
+      'Město',
+      'PSČ',
+      'Stav',
+      'Datum registrace'
+    ]
+
+    const csvContent = [
+      headers.join(';'),
+      ...dataToExport.map(reg => [
+        `"${reg.child_name}"`,
+        reg.child_age,
+        `"${reg.stall_name}"`,
+        `"${reg.products.replace(/"/g, '""')}"`,
+        `"${reg.parent_name}"`,
+        `"${reg.parent_email}"`,
+        `"${reg.parent_phone}"`,
+        `"${reg.address_street}"`,
+        `"${reg.address_number}"`,
+        `"${reg.address_city}"`,
+        `"${reg.address_postal_code}"`,
+        `"${getStatusLabel(reg.status)}"`,
+        `"${new Date(reg.created_at).toLocaleDateString('cs-CZ')}"`
+      ].join(';'))
+    ].join('\n')
+
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `registrace-detske-trhy-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const stats = {
     total: registrations.length,
     pending: registrations.filter(r => r.status === 'pending').length,
@@ -124,7 +187,7 @@ export default function AdminDashboard() {
         reg.parent_name.toLowerCase().includes(query) ||
         reg.parent_email.toLowerCase().includes(query) ||
         reg.stall_name.toLowerCase().includes(query) ||
-        reg.city.toLowerCase().includes(query)
+        reg.address_city.toLowerCase().includes(query)
       )
     }
     return true
@@ -261,6 +324,14 @@ export default function AdminDashboard() {
                 Zrušit filtry
               </button>
             )}
+            <button
+              onClick={handleExportCSV}
+              disabled={filteredRegistrations.length === 0}
+              className="flex items-center px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Export CSV
+            </button>
           </div>
           <div className="mt-3 text-sm text-gray-500">
             Zobrazeno {filteredRegistrations.length} z {registrations.length} registrací
@@ -296,7 +367,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-4">
                         <div className="font-medium text-gray-800">{reg.child_name}</div>
                         <div className="text-sm font-medium" style={{ color: '#C8102E' }}>{reg.stall_name}</div>
-                        <div className="text-xs text-gray-400">{reg.child_age} let • {reg.city}</div>
+                        <div className="text-xs text-gray-400">{reg.child_age} let • {reg.address_city}</div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="text-sm text-gray-800">{reg.parent_name}</div>

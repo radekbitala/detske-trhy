@@ -15,10 +15,12 @@ export default function RegistrationPage() {
     parentEmail: '',
     parentPhone: '',
     parentBirthDate: '',
-    parentAddress: '',
+    addressStreet: '',
+    addressNumber: '',
+    addressCity: '',
+    addressPostalCode: '',
     childName: '',
     childAge: '',
-    city: '',
     stallName: '',
     products: '',
     consentGiven: false
@@ -42,10 +44,12 @@ export default function RegistrationPage() {
           parent_email: formData.parentEmail,
           parent_phone: formData.parentPhone,
           parent_birth_date: formData.parentBirthDate,
-          parent_address: formData.parentAddress,
+          address_street: formData.addressStreet,
+          address_number: formData.addressNumber,
+          address_city: formData.addressCity,
+          address_postal_code: formData.addressPostalCode,
           child_name: formData.childName,
           child_age: parseInt(formData.childAge),
-          city: formData.city,
           stall_name: formData.stallName,
           products: formData.products,
           consent_given: formData.consentGiven
@@ -80,8 +84,8 @@ export default function RegistrationPage() {
               setFormSubmitted(false)
               setFormData({
                 parentName: '', parentEmail: '', parentPhone: '', parentBirthDate: '',
-                parentAddress: '', childName: '', childAge: '', city: '', stallName: '',
-                products: '', consentGiven: false
+                addressStreet: '', addressNumber: '', addressCity: '', addressPostalCode: '',
+                childName: '', childAge: '', stallName: '', products: '', consentGiven: false
               })
             }}
             style={{ backgroundColor: '#C8102E' }}
@@ -165,15 +169,48 @@ export default function RegistrationPage() {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresa trvalého bydliště *</label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ulice *</label>
                   <input
                     type="text"
                     required
-                    value={formData.parentAddress}
-                    onChange={e => setFormData({...formData, parentAddress: e.target.value})}
+                    value={formData.addressStreet}
+                    onChange={e => setFormData({...formData, addressStreet: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
-                    placeholder="Ulice, číslo, město, PSČ"
+                    placeholder="např. Hlavní"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Číslo popisné *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.addressNumber}
+                    onChange={e => setFormData({...formData, addressNumber: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    placeholder="např. 123/4"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.addressCity}
+                    onChange={e => setFormData({...formData, addressCity: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    placeholder="např. Praha"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">PSČ *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.addressPostalCode}
+                    onChange={e => setFormData({...formData, addressPostalCode: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
+                    placeholder="např. 110 00"
                   />
                 </div>
                 <div>
@@ -225,16 +262,6 @@ export default function RegistrationPage() {
                     max="18"
                     value={formData.childAge}
                     onChange={e => setFormData({...formData, childAge: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
-                  />
-                </div>
-                <div className="md:col-span-2 md:w-1/2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Město, kde žijete *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={e => setFormData({...formData, city: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-colors"
                   />
                 </div>
