@@ -11,7 +11,6 @@ export default function AdminLoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if already logged in
     const savedPassword = localStorage.getItem('admin_password')
     if (savedPassword) {
       router.push('/admin/dashboard')
@@ -24,7 +23,6 @@ export default function AdminLoginPage() {
     setError('')
 
     try {
-      // Test the password by making a request
       const response = await fetch('/api/registrations', {
         headers: {
           'Authorization': `Bearer ${password}`
@@ -48,8 +46,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-8 h-8 text-indigo-600" />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(200, 16, 46, 0.1)' }}>
+            <Lock className="w-8 h-8" style={{ color: '#C8102E' }} />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Admin přihlášení</h1>
           <p className="text-gray-500 mt-1">Dětské trhy 2026</p>
@@ -69,7 +67,7 @@ export default function AdminLoginPage() {
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none"
               placeholder="Zadejte heslo"
             />
           </div>
@@ -77,7 +75,8 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center disabled:opacity-50"
+            style={{ backgroundColor: '#C8102E' }}
+            className="w-full text-white py-3 px-6 rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center disabled:opacity-50"
           >
             {isLoading ? (
               'Přihlašuji...'
