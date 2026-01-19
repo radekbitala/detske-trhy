@@ -8,12 +8,14 @@ CREATE TABLE registrations (
   parent_email TEXT NOT NULL,
   parent_phone TEXT NOT NULL,
   parent_birth_date DATE NOT NULL,
-  parent_address TEXT NOT NULL,
-  
+  address_street TEXT NOT NULL,
+  address_number TEXT NOT NULL,
+  address_city TEXT NOT NULL,
+  address_postal_code TEXT NOT NULL,
+
   -- Dítě
   child_name TEXT NOT NULL,
   child_age INTEGER NOT NULL,
-  city TEXT NOT NULL,
   
   -- Stánek
   stall_name TEXT NOT NULL,
