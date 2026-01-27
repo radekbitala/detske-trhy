@@ -164,9 +164,10 @@ export default function RegistrationPage() {
           xhr.onerror = () => reject(new Error('Chyba sítě při nahrávání'))
           xhr.ontimeout = () => reject(new Error('Upload vypršel'))
 
-          xhr.open('POST', uploadUrl)
+          xhr.open('PUT', uploadUrl)
           xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
           xhr.setRequestHeader('Content-Type', presentationFile.type)
+          xhr.setRequestHeader('x-upsert', 'true')
           xhr.timeout = 600000 // 10 minut timeout pro velké soubory
           xhr.send(presentationFile)
         })
