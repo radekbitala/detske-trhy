@@ -66,11 +66,16 @@ export default function UploadPage() {
       const fileExt = presentationFile.name.split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-      // Upload using direct Supabase Storage REST API with XMLHttpRequest for progress
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      const uploadUrl = `${supabaseUrl}/storage/v1/object/presentations/${fileName}`
+      // Get signed upload URL from Supabase
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('presentations')
+        .createSignedUploadUrl(fileName)
 
+      if (signedUrlError || !signedUrlData) {
+        throw new Error('Chyba při přípravě uploadu: ' + (signedUrlError?.message || 'Neznámá chyba'))
+      }
+
+      // Upload with XMLHttpRequest for real progress tracking
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
 
@@ -92,10 +97,9 @@ export default function UploadPage() {
         xhr.onerror = () => reject(new Error('Chyba sítě při nahrávání'))
         xhr.ontimeout = () => reject(new Error('Upload vypršel'))
 
-        xhr.open('POST', uploadUrl)
-        xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
+        xhr.open('PUT', signedUrlData.signedUrl)
         xhr.setRequestHeader('Content-Type', presentationFile.type)
-        xhr.timeout = 300000
+        xhr.timeout = 600000 // 10 minut timeout pro velké soubory
         xhr.send(presentationFile)
       })
 
