@@ -58,7 +58,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleApprove = async (id: string, action: 'approve_theme' | 'approve_video') => {
+  const handleApprove = async (id: string, action: 'approve_theme' | 'approve_video' | 'approve_all') => {
     const password = localStorage.getItem('admin_password')
     setActionLoading(id)
     
@@ -387,7 +387,17 @@ export default function AdminDashboard() {
                             <Eye className="w-3 h-3 mr-1" />
                             Detail
                           </button>
-                          {reg.status === 'pending' && (
+                          {reg.status === 'pending' && reg.presentation_url && (
+                            <button
+                              onClick={() => handleApprove(reg.id, 'approve_all')}
+                              disabled={actionLoading === reg.id}
+                              className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {actionLoading === reg.id ? '...' : 'Schválit registraci'}
+                            </button>
+                          )}
+                          {reg.status === 'pending' && !reg.presentation_url && (
                             <button
                               onClick={() => handleApprove(reg.id, 'approve_theme')}
                               disabled={actionLoading === reg.id}
