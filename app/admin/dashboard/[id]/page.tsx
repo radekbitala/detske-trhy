@@ -113,13 +113,21 @@ export default function RegistrationDetailPage() {
     return new Date(dateStr).toLocaleDateString('cs-CZ')
   }
 
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; label: string }> = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Čeká na schválení' },
-      theme_approved: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Čeká na video' },
-      video_approved: { bg: 'bg-green-100', text: 'text-green-800', label: 'Schváleno ✓' }
+  const getStatusBadge = (status: string, hasVideo: boolean) => {
+    let badge = { bg: 'bg-gray-100', text: 'text-gray-800', label: status }
+
+    if (status === 'pending') {
+      badge = hasVideo
+        ? { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Čeká na schválení' }
+        : { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Čeká na schválení tématu' }
+    } else if (status === 'theme_approved') {
+      badge = hasVideo
+        ? { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Video nahráno' }
+        : { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Čeká na video' }
+    } else if (status === 'video_approved') {
+      badge = { bg: 'bg-green-100', text: 'text-green-800', label: 'Schváleno ✓' }
     }
-    const badge = badges[status]
+
     return (
       <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${badge.bg} ${badge.text}`}>
         {badge.label}
@@ -193,7 +201,7 @@ export default function RegistrationDetailPage() {
               <div className="text-gray-500">{registration.child_name} ({registration.child_age} let)</div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {getStatusBadge(registration.status)}
+              {getStatusBadge(registration.status, !!registration.presentation_url)}
               {registration.status === 'pending' && registration.presentation_url && (
                 <button
                   onClick={() => handleApprove('approve_all')}
