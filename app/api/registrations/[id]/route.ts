@@ -114,7 +114,7 @@ export async function PUT(
         const template = EMAIL_TEMPLATES[emailType]
         // For theme_approved, include the upload URL
         const uploadUrl = emailType === 'theme_approved' && registration.upload_token
-          ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://detske-trhy.cz'}/upload/${registration.upload_token}`
+          ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://detske-trhy.vercel.app'}/upload/${registration.upload_token}`
           : undefined
         await resend.emails.send({
           from: 'Dětské trhy <onboarding@resend.dev>',
