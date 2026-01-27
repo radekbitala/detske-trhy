@@ -129,29 +129,47 @@ export default function RegistrationPage() {
     try {
       let presentationUrl: string | null = null
 
-      // Upload presentation file if provided - using Supabase SDK
+      // Upload presentation file if provided - with real progress tracking
       if (presentationFile) {
         setIsUploading(true)
-        setUploadProgress(10) // Show some progress
+        setUploadProgress(0)
 
         const fileExt = presentationFile.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        setUploadProgress(30)
+        // Get Supabase credentials from the client instance
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        const uploadUrl = `${supabaseUrl}/storage/v1/object/presentations/${fileName}`
 
-        // Upload using Supabase SDK
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('presentations')
-          .upload(fileName, presentationFile, {
-            cacheControl: '3600',
-            upsert: false
-          })
+        // Upload with XMLHttpRequest for real progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
 
-        if (uploadError) {
-          throw new Error('Upload selhal: ' + uploadError.message)
-        }
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded / e.total) * 100)
+              setUploadProgress(progress)
+            }
+          }
 
-        setUploadProgress(90)
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve()
+            } else {
+              reject(new Error('Upload selhal: ' + xhr.status))
+            }
+          }
+
+          xhr.onerror = () => reject(new Error('Chyba sítě při nahrávání'))
+          xhr.ontimeout = () => reject(new Error('Upload vypršel'))
+
+          xhr.open('POST', uploadUrl)
+          xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
+          xhr.setRequestHeader('Content-Type', presentationFile.type)
+          xhr.timeout = 600000 // 10 minut timeout pro velké soubory
+          xhr.send(presentationFile)
+        })
 
         // Get public URL
         const { data: urlData } = supabase.storage
