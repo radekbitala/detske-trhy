@@ -1,27 +1,32 @@
 export const EMAIL_TEMPLATES = {
   theme_approved: {
-    subject: 'Registrace na Dětské trhy je platná – pošlete video',
-    html: (childName: string) => `
+    subject: 'Registrace na Dětské trhy je platná – nahrajte video',
+    html: (childName: string, uploadUrl?: string) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #7c3aed;">🎪 Dětské trhy – Srdcem pro lepší svět</h2>
-        
+        <h2 style="color: #C8102E;">🎪 Dětské trhy – Srdcem pro lepší svět</h2>
+
         <p>Dobrý den,</p>
-        
+
         <p>Vaše registrace dítěte <strong>${childName}</strong> na Dětské trhy <strong>24. května 2026</strong> je platná.</p>
-        
-        <p><strong>Aby byla registrace dokončena, zašlete prosím videonahrávku záměru stánku do 31. března 2026.</strong></p>
-        
+
+        <p><strong>Aby byla registrace dokončena, nahrajte prosím videonahrávku záměru stánku do 28. února 2026.</strong></p>
+
+        ${uploadUrl ? `
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <strong>📹 Nahrát video:</strong><br>
+          <a href="${uploadUrl}" style="color: #C8102E; word-break: break-all;">${uploadUrl}</a>
+        </div>
+        ` : ''}
+
         <ul>
           <li>Nahrávka bude použita pro hodnotící porotu i pro případné návrhy na zlepšení</li>
           <li>Doporučujeme délku cca 20 sekund, max. 40 sekund</li>
           <li>Výsledek hodnocení Vám bude sdělen do 5 pracovních dní</li>
           <li>Nahrávka může být použita také k veřejné prezentaci pořadatele</li>
         </ul>
-        
-        <p>Video prosím zašlete na email: <a href="mailto:veronika@calm2be.cz">veronika@calm2be.cz</a></p>
-        
+
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
-        
+
         <p style="color: #6b7280; font-size: 14px;">
           S pozdravem,<br>
           <strong>Calm2be z.s.</strong><br>
@@ -35,7 +40,7 @@ export const EMAIL_TEMPLATES = {
     subject: 'Jupííí, vítáme vás na Dětských trzích! 🎉',
     html: (childName: string) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #7c3aed;">🎪 Dětské trhy – Srdcem pro lepší svět</h2>
+        <h2 style="color: #C8102E;">🎪 Dětské trhy – Srdcem pro lepší svět</h2>
         
         <p><strong style="font-size: 18px; color: #16a34a;">Jupííí, vítáme vás na trhu!</strong></p>
         

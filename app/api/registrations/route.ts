@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,27 +11,29 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
+
+    // Generate upload token for later video upload
+    const uploadToken = randomUUID()
+
     const { data, error } = await supabase
       .from('registrations')
       .insert([{
         parent_name: body.parent_name,
         parent_email: body.parent_email,
         parent_phone: body.parent_phone,
-        parent_birth_date: body.parent_birth_date,
-        address_street: body.address_street,
-        address_number: body.address_number,
-        address_city: body.address_city,
-        address_postal_code: body.address_postal_code,
+        parent_city: body.parent_city,
+        parent_region: body.parent_region,
         child_name: body.child_name,
         child_age: body.child_age,
         stall_name: body.stall_name,
         products: body.products,
+        presentation_url: body.presentation_url,
         consent_given: body.consent_given,
         status: 'pending',
-        emails_sent: []
+        emails_sent: [],
+        upload_token: uploadToken
       }])
-      .select()
+      .select('*, upload_token')
       .single()
 
     if (error) {
@@ -38,7 +41,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data, { status: 201 })
+    // Return registration data including upload_token for success screen
+    return NextResponse.json({
+      ...data,
+      hasVideo: !!body.presentation_url
+    }, { status: 201 })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

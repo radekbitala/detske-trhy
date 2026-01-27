@@ -10,14 +10,13 @@ interface Registration {
   parent_name: string
   parent_email: string
   parent_phone: string
-  address_street: string
-  address_number: string
-  address_city: string
-  address_postal_code: string
+  parent_city: string
+  parent_region: string
   child_name: string
   child_age: number
   stall_name: string
   products: string
+  presentation_url: string | null
   status: 'pending' | 'theme_approved' | 'video_approved'
 }
 
@@ -132,10 +131,9 @@ export default function AdminDashboard() {
       'Jméno rodiče',
       'Email',
       'Telefon',
-      'Ulice',
-      'Číslo',
       'Město',
-      'PSČ',
+      'Kraj',
+      'Prezentace',
       'Stav',
       'Datum registrace'
     ]
@@ -150,10 +148,9 @@ export default function AdminDashboard() {
         `"${reg.parent_name}"`,
         `"${reg.parent_email}"`,
         `"${reg.parent_phone}"`,
-        `"${reg.address_street}"`,
-        `"${reg.address_number}"`,
-        `"${reg.address_city}"`,
-        `"${reg.address_postal_code}"`,
+        `"${reg.parent_city}"`,
+        `"${reg.parent_region}"`,
+        `"${reg.presentation_url || ''}"`,
         `"${getStatusLabel(reg.status)}"`,
         `"${new Date(reg.created_at).toLocaleDateString('cs-CZ')}"`
       ].join(';'))
@@ -187,7 +184,8 @@ export default function AdminDashboard() {
         reg.parent_name.toLowerCase().includes(query) ||
         reg.parent_email.toLowerCase().includes(query) ||
         reg.stall_name.toLowerCase().includes(query) ||
-        reg.address_city.toLowerCase().includes(query)
+        reg.parent_city.toLowerCase().includes(query) ||
+        reg.parent_region.toLowerCase().includes(query)
       )
     }
     return true
@@ -367,7 +365,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-4">
                         <div className="font-medium text-gray-800">{reg.child_name}</div>
                         <div className="text-sm font-medium" style={{ color: '#C8102E' }}>{reg.stall_name}</div>
-                        <div className="text-xs text-gray-400">{reg.child_age} let • {reg.address_city}</div>
+                        <div className="text-xs text-gray-400">{reg.child_age} let • {reg.parent_city}</div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="text-sm text-gray-800">{reg.parent_name}</div>

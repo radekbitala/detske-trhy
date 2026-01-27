@@ -10,15 +10,13 @@ interface Registration {
   parent_name: string
   parent_email: string
   parent_phone: string
-  parent_birth_date: string
-  address_street: string
-  address_number: string
-  address_city: string
-  address_postal_code: string
+  parent_city: string
+  parent_region: string
   child_name: string
   child_age: number
   stall_name: string
   products: string
+  presentation_url: string | null
   status: 'pending' | 'theme_approved' | 'video_approved'
   consent_given: boolean
   emails_sent: string[]
@@ -63,7 +61,7 @@ export default function RegistrationDetailPage() {
     }
   }
 
-  const handleApprove = async (action: 'approve_theme' | 'approve_video') => {
+  const handleApprove = async (action: 'approve_theme' | 'approve_video' | 'approve_all') => {
     const password = localStorage.getItem('admin_password')
     setActionLoading(true)
     
@@ -196,7 +194,17 @@ export default function RegistrationDetailPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {getStatusBadge(registration.status)}
-              {registration.status === 'pending' && (
+              {registration.status === 'pending' && registration.presentation_url && (
+                <button
+                  onClick={() => handleApprove('approve_all')}
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  {actionLoading ? 'Zpracovávám...' : 'Schválit registraci'}
+                </button>
+              )}
+              {registration.status === 'pending' && !registration.presentation_url && (
                 <button
                   onClick={() => handleApprove('approve_theme')}
                   disabled={actionLoading}
@@ -206,7 +214,7 @@ export default function RegistrationDetailPage() {
                   {actionLoading ? 'Zpracovávám...' : 'Schválit téma'}
                 </button>
               )}
-              {registration.status === 'theme_approved' && (
+              {registration.status === 'theme_approved' && registration.presentation_url && (
                 <button
                   onClick={() => handleApprove('approve_video')}
                   disabled={actionLoading}
@@ -215,6 +223,11 @@ export default function RegistrationDetailPage() {
                   <CheckCircle className="w-4 h-4 inline mr-1" />
                   {actionLoading ? 'Zpracovávám...' : 'Schválit video'}
                 </button>
+              )}
+              {registration.status === 'theme_approved' && !registration.presentation_url && (
+                <span className="px-4 py-2 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg">
+                  Čeká na video
+                </span>
               )}
               <button
                 onClick={() => setDeleteConfirm(true)}
@@ -240,16 +253,6 @@ export default function RegistrationDetailPage() {
                 <dd className="text-gray-800 font-medium">{registration.parent_name}</dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500 uppercase">Datum narození</dt>
-                <dd className="text-gray-800">{formatDate(registration.parent_birth_date)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-gray-500 uppercase">Adresa</dt>
-                <dd className="text-gray-800">
-                  {registration.address_street} {registration.address_number}, {registration.address_city}, {registration.address_postal_code}
-                </dd>
-              </div>
-              <div>
                 <dt className="text-xs text-gray-500 uppercase">E-mail</dt>
                 <dd className="text-gray-800">
                   <a href={`mailto:${registration.parent_email}`} style={{ color: '#C8102E' }} className="hover:underline">
@@ -264,6 +267,14 @@ export default function RegistrationDetailPage() {
                     {registration.parent_phone}
                   </a>
                 </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-gray-500 uppercase">Město</dt>
+                <dd className="text-gray-800">{registration.parent_city}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-gray-500 uppercase">Kraj</dt>
+                <dd className="text-gray-800">{registration.parent_region}</dd>
               </div>
             </dl>
           </div>
@@ -301,6 +312,23 @@ export default function RegistrationDetailPage() {
                 <dt className="text-xs text-gray-500 uppercase">Sortiment</dt>
                 <dd className="text-gray-800 bg-gray-50 p-3 rounded-lg">{registration.products}</dd>
               </div>
+              {registration.presentation_url && (
+                <div>
+                  <dt className="text-xs text-gray-500 uppercase">Prezentace projektu</dt>
+                  <dd className="mt-1">
+                    <a
+                      href={registration.presentation_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#C8102E' }}
+                      className="inline-flex items-center gap-2 bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Zobrazit prezentaci
+                    </a>
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
 

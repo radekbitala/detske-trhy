@@ -12,15 +12,13 @@ export interface Registration {
   parent_name: string
   parent_email: string
   parent_phone: string
-  parent_birth_date: string
-  address_street: string
-  address_number: string
-  address_city: string
-  address_postal_code: string
+  parent_city: string
+  parent_region: string
   child_name: string
   child_age: number
   stall_name: string
   products: string
+  presentation_url: string | null
   status: 'pending' | 'theme_approved' | 'video_approved'
   consent_given: boolean
   emails_sent: string[]

@@ -1,7 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, CheckCircle, User, Baby, Package, Calendar, MapPin } from 'lucide-react'
+import { Send, CheckCircle, User, Baby, Package, Calendar, MapPin, Upload, X, FileText } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+
+const KRAJE_CR = [
+  'Hlavní město Praha',
+  'Středočeský kraj',
+  'Jihočeský kraj',
+  'Plzeňský kraj',
+  'Karlovarský kraj',
+  'Ústecký kraj',
+  'Liberecký kraj',
+  'Královéhradecký kraj',
+  'Pardubický kraj',
+  'Kraj Vysočina',
+  'Jihomoravský kraj',
+  'Olomoucký kraj',
+  'Zlínský kraj',
+  'Moravskoslezský kraj',
+]
 
 const CONSENT_TEXT = `Souhlasím se zpracováním osobních údajů svého dítěte (jméno, příjmení, věk, fotografie a videa pořízená v rámci aktivit) spolkem Calm2be, z.s., IČO: 17901006, se sídlem Na Vinici 109/9, 290 01 Poděbrady. Tyto údaje mohou být použity pro organizaci akcí a také pro jejich propagaci (web, sociální sítě, propagační materiály). Souhlas je platný po dobu účasti dítěte na aktivitách a nejdéle 5 let od jeho udělení.
 
@@ -13,8 +31,7 @@ Rozumím pravidlům dozoru – po dobu aktivit jsem přítomen/a a vykonávám n
 const PATTERNS = {
   name: /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s\-]+$/,
   phone: /^(\+420)?[0-9]{9}$/,
-  postalCode: /^[0-9]{3}\s?[0-9]{2}$/,
-  address: /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9\s\.\-\/]+$/,
+  city: /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9\s\.\-\/]+$/,
 }
 
 const validateField = (field: string, value: string): string | null => {
@@ -30,27 +47,12 @@ const validateField = (field: string, value: string): string | null => {
       if (!cleanPhone) return 'Toto pole je povinné'
       if (!PATTERNS.phone.test(cleanPhone)) return 'Zadejte platné telefonní číslo (9 číslic)'
       return null
-    case 'addressPostalCode':
-      const cleanPSC = value.replace(/\s/g, '')
-      if (!cleanPSC) return 'Toto pole je povinné'
-      if (!PATTERNS.postalCode.test(value)) return 'PSČ musí být 5 číslic (např. 110 00)'
-      return null
-    case 'addressStreet':
-    case 'addressCity':
+    case 'parentCity':
       if (!value.trim()) return 'Toto pole je povinné'
-      if (!PATTERNS.address.test(value)) return 'Pole obsahuje neplatné znaky'
+      if (!PATTERNS.city.test(value)) return 'Pole obsahuje neplatné znaky'
       return null
-    case 'addressNumber':
-      if (!value.trim()) return 'Toto pole je povinné'
-      if (!/^[0-9a-zA-Z\s\/\-]+$/.test(value)) return 'Číslo popisné obsahuje neplatné znaky'
-      return null
-    case 'parentBirthDate':
-      if (!value) return 'Toto pole je povinné'
-      const birthDate = new Date(value)
-      const today = new Date()
-      const age = today.getFullYear() - birthDate.getFullYear()
-      if (age < 18) return 'Zákonný zástupce musí být starší 18 let'
-      if (age > 120) return 'Zadejte platné datum narození'
+    case 'parentRegion':
+      if (!value) return 'Vyberte prosím kraj'
       return null
     default:
       return null
@@ -62,11 +64,8 @@ export default function RegistrationPage() {
     parentName: '',
     parentEmail: '',
     parentPhone: '',
-    parentBirthDate: '',
-    addressStreet: '',
-    addressNumber: '',
-    addressCity: '',
-    addressPostalCode: '',
+    parentCity: '',
+    parentRegion: '',
     childName: '',
     childAge: '',
     stallName: '',
@@ -75,9 +74,17 @@ export default function RegistrationPage() {
   })
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({})
   const [formSubmitted, setFormSubmitted] = useState(false)
+  const [registrationResult, setRegistrationResult] = useState<{
+    upload_token: string
+    hasVideo: boolean
+    stall_name: string
+  } | null>(null)
   const [showFullConsent, setShowFullConsent] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [presentationFile, setPresentationFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
 
   const handleFieldChange = (field: string, value: string | boolean) => {
     setFormData({ ...formData, [field]: value })
@@ -105,7 +112,7 @@ export default function RegistrationPage() {
 
     // Validate all fields
     const errors: Record<string, string | null> = {}
-    const fieldsToValidate = ['parentName', 'parentPhone', 'parentBirthDate', 'addressStreet', 'addressNumber', 'addressCity', 'addressPostalCode', 'childName']
+    const fieldsToValidate = ['parentName', 'parentPhone', 'parentCity', 'parentRegion', 'childName']
 
     for (const field of fieldsToValidate) {
       const fieldError = validateField(field, formData[field as keyof typeof formData] as string)
@@ -120,6 +127,59 @@ export default function RegistrationPage() {
     }
 
     try {
+      let presentationUrl: string | null = null
+
+      // Upload presentation file if provided - with progress tracking
+      if (presentationFile) {
+        setIsUploading(true)
+        setUploadProgress(0)
+
+        const fileExt = presentationFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+
+        // Upload using direct Supabase Storage REST API with XMLHttpRequest for progress
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        const uploadUrl = `${supabaseUrl}/storage/v1/object/presentations/${fileName}`
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded / e.total) * 100)
+              setUploadProgress(progress)
+            }
+          }
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve()
+            } else {
+              reject(new Error('Upload selhal: ' + xhr.status + ' ' + xhr.responseText))
+            }
+          }
+
+          xhr.onerror = () => reject(new Error('Chyba sítě při nahrávání'))
+          xhr.ontimeout = () => reject(new Error('Upload vypršel - zkuste menší soubor'))
+
+          xhr.open('POST', uploadUrl)
+          xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
+          xhr.setRequestHeader('Content-Type', presentationFile.type)
+          xhr.timeout = 300000 // 5 minut timeout pro velké soubory
+          xhr.send(presentationFile)
+        })
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('presentations')
+          .getPublicUrl(fileName)
+
+        presentationUrl = urlData.publicUrl
+        setIsUploading(false)
+        setUploadProgress(100)
+      }
+
       const response = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,15 +187,13 @@ export default function RegistrationPage() {
           parent_name: formData.parentName.trim(),
           parent_email: formData.parentEmail.trim(),
           parent_phone: formData.parentPhone.replace(/\s/g, ''),
-          parent_birth_date: formData.parentBirthDate,
-          address_street: formData.addressStreet.trim(),
-          address_number: formData.addressNumber.trim(),
-          address_city: formData.addressCity.trim(),
-          address_postal_code: formData.addressPostalCode.replace(/\s/g, ''),
+          parent_city: formData.parentCity.trim(),
+          parent_region: formData.parentRegion,
           child_name: formData.childName.trim(),
           child_age: parseInt(formData.childAge),
           stall_name: formData.stallName.trim(),
           products: formData.products.trim(),
+          presentation_url: presentationUrl,
           consent_given: formData.consentGiven
         })
       })
@@ -144,15 +202,28 @@ export default function RegistrationPage() {
         throw new Error('Nepodařilo se odeslat registraci')
       }
 
+      const result = await response.json()
+      setRegistrationResult({
+        upload_token: result.upload_token,
+        hasVideo: result.hasVideo,
+        stall_name: result.stall_name
+      })
       setFormSubmitted(true)
     } catch (err) {
-      setError('Nepodařilo se odeslat registraci. Zkuste to prosím znovu.')
+      console.error('Registration error:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Neznámá chyba'
+      setError(`Nepodařilo se odeslat registraci: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
+      setIsUploading(false)
     }
   }
 
   if (formSubmitted) {
+    const uploadUrl = registrationResult?.upload_token
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/upload/${registrationResult.upload_token}`
+      : null
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
@@ -160,18 +231,52 @@ export default function RegistrationPage() {
             <CheckCircle className="w-10 h-10 text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Registrace odeslána!</h2>
-          <p className="text-gray-600 mb-6">
-            Děkujeme za registraci na Dětské trhy. Brzy Vás budeme kontaktovat ohledně validace tématu stánku.
-          </p>
+
+          {registrationResult?.hasVideo ? (
+            <p className="text-gray-600 mb-6">
+              Děkujeme za registraci na Dětské trhy. Vaše video bylo nahráno a brzy se ozveme s výsledkem hodnocení.
+            </p>
+          ) : (
+            <>
+              <p className="text-gray-600 mb-4">
+                Děkujeme za registraci na Dětské trhy. Brzy Vás budeme kontaktovat ohledně validace tématu stánku.
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm text-yellow-800 mb-2">
+                  <strong>Video můžete nahrát kdykoliv do 28. února 2026</strong>
+                </p>
+                <p className="text-xs text-yellow-700 mb-2">
+                  Pro nové účastníky doporučujeme nahrát krátké video (20-40s) představující váš projekt.
+                </p>
+                {uploadUrl && (
+                  <div className="mt-3 p-2 bg-white rounded border border-yellow-300">
+                    <p className="text-xs text-gray-500 mb-1">Odkaz pro nahrání videa:</p>
+                    <a
+                      href={uploadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#C8102E' }}
+                      className="text-sm font-medium hover:underline break-all"
+                    >
+                      {uploadUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <button
             onClick={() => {
               setFormSubmitted(false)
+              setRegistrationResult(null)
               setFormData({
-                parentName: '', parentEmail: '', parentPhone: '', parentBirthDate: '',
-                addressStreet: '', addressNumber: '', addressCity: '', addressPostalCode: '',
+                parentName: '', parentEmail: '', parentPhone: '',
+                parentCity: '', parentRegion: '',
                 childName: '', childAge: '', stallName: '', products: '', consentGiven: false
               })
               setFieldErrors({})
+              setPresentationFile(null)
             }}
             style={{ backgroundColor: '#C8102E' }}
             className="text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
@@ -188,8 +293,8 @@ export default function RegistrationPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <a href="https://calm2be.cz" target="_blank" rel="noopener noreferrer" style={{ color: '#C8102E' }} className="text-2xl font-bold">
-            calm<span className="font-normal">2</span>be
+          <a href="https://calm2be.cz" target="_blank" rel="noopener noreferrer">
+            <img src="/logo.png" alt="Calm2be logo" className="h-10" />
           </a>
           <span className="text-sm text-gray-500">Dětské trhy 2026</span>
         </div>
@@ -247,70 +352,6 @@ export default function RegistrationPage() {
                   {fieldErrors.parentName && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentName}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Datum narození *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.parentBirthDate}
-                    onChange={e => handleFieldChange('parentBirthDate', e.target.value)}
-                    onBlur={e => handleFieldBlur('parentBirthDate', e.target.value)}
-                    className={getInputClass('parentBirthDate')}
-                  />
-                  {fieldErrors.parentBirthDate && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentBirthDate}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ulice *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.addressStreet}
-                    onChange={e => handleFieldChange('addressStreet', e.target.value)}
-                    onBlur={e => handleFieldBlur('addressStreet', e.target.value)}
-                    className={getInputClass('addressStreet')}
-                    placeholder="např. Hlavní"
-                  />
-                  {fieldErrors.addressStreet && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressStreet}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Číslo popisné *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.addressNumber}
-                    onChange={e => handleFieldChange('addressNumber', e.target.value)}
-                    onBlur={e => handleFieldBlur('addressNumber', e.target.value)}
-                    className={getInputClass('addressNumber')}
-                    placeholder="např. 123/4"
-                  />
-                  {fieldErrors.addressNumber && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressNumber}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PSČ *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.addressPostalCode}
-                    onChange={e => handleFieldChange('addressPostalCode', e.target.value)}
-                    onBlur={e => handleFieldBlur('addressPostalCode', e.target.value)}
-                    className={getInputClass('addressPostalCode')}
-                    placeholder="např. 110 00"
-                  />
-                  {fieldErrors.addressPostalCode && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressPostalCode}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.addressCity}
-                    onChange={e => handleFieldChange('addressCity', e.target.value)}
-                    onBlur={e => handleFieldBlur('addressCity', e.target.value)}
-                    className={getInputClass('addressCity')}
-                    placeholder="např. Praha"
-                  />
-                  {fieldErrors.addressCity && <p className="text-red-500 text-xs mt-1">{fieldErrors.addressCity}</p>}
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
                   <input
                     type="email"
@@ -333,6 +374,35 @@ export default function RegistrationPage() {
                   />
                   {fieldErrors.parentPhone && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentPhone}</p>}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Město *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.parentCity}
+                    onChange={e => handleFieldChange('parentCity', e.target.value)}
+                    onBlur={e => handleFieldBlur('parentCity', e.target.value)}
+                    className={getInputClass('parentCity')}
+                    placeholder="např. Praha"
+                  />
+                  {fieldErrors.parentCity && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentCity}</p>}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kraj *</label>
+                  <select
+                    required
+                    value={formData.parentRegion}
+                    onChange={e => handleFieldChange('parentRegion', e.target.value)}
+                    onBlur={e => handleFieldBlur('parentRegion', e.target.value)}
+                    className={getInputClass('parentRegion')}
+                  >
+                    <option value="">Vyberte kraj</option>
+                    {KRAJE_CR.map(kraj => (
+                      <option key={kraj} value={kraj}>{kraj}</option>
+                    ))}
+                  </select>
+                  {fieldErrors.parentRegion && <p className="text-red-500 text-xs mt-1">{fieldErrors.parentRegion}</p>}
+                </div>
               </div>
             </div>
 
@@ -344,7 +414,7 @@ export default function RegistrationPage() {
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jméno a příjmení dítěte *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Jméno dítěte *</label>
                   <input
                     type="text"
                     required
@@ -403,6 +473,82 @@ export default function RegistrationPage() {
               </div>
             </div>
 
+            {/* Prezentace - volitelné */}
+            <div className="border-b border-gray-200 pb-6">
+              <h3 className="font-semibold text-gray-700 mb-4 flex items-center">
+                <Upload className="w-5 h-5 mr-2" style={{ color: '#C8102E' }} />
+                Prezentace projektu (volitelné)
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">
+                Pro nové účastníky: Nahrajte video, prezentaci, fotky nebo popis vašeho business plánu.
+                Ukažte nám, čím jste jedineční a proč by to měl být na trhu právě VÁŠ projekt.
+              </p>
+              <p className="text-sm text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg mb-4">
+                Video můžete nahrát nyní nebo kdykoliv později <strong>do 28. února 2026</strong>. Po odeslání registrace obdržíte odkaz pro dodatečné nahrání.
+              </p>
+              <div className="space-y-4">
+                {presentationFile ? (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-8 h-8 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-700">{presentationFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(presentationFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPresentationFile(null)}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-1 text-sm text-gray-500">
+                        <span className="font-semibold">Klikněte pro nahrání</span> nebo přetáhněte soubor
+                      </p>
+                      <p className="text-xs text-gray-400">Video (MP4, MOV), obrázky (JPG, PNG) nebo PDF (max 50MB)</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".mp4,.mov,.webm,.jpg,.jpeg,.png,.gif,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          if (file.size > 50 * 1024 * 1024) {
+                            setError('Soubor je příliš velký. Maximální velikost je 50MB.')
+                            return
+                          }
+                          setPresentationFile(file)
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Nahrávám soubor...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Souhlas */}
             <div className="bg-gray-50 p-5 rounded-xl">
               <div className="flex items-start space-x-3">
@@ -441,6 +587,15 @@ export default function RegistrationPage() {
               <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-600">
                   💰 <strong>Poplatek za stánek:</strong> 500 Kč – vybírá se na místě, až si stánek vydělá.
+                </p>
+              </div>
+
+              <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-1">
+                  📅 <strong>Deadline pro registraci:</strong> 28. února 2026 (1. kolo)
+                </p>
+                <p className="text-sm text-gray-600">
+                  📬 <strong>Výsledky:</strong> nejpozději do půlky března 2026
                 </p>
               </div>
             </div>
