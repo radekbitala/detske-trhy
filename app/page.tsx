@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Send, CheckCircle, User, Baby, Package, Calendar, MapPin, Upload, X, FileText } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const KRAJE_CR = [
   'Hlavní město Praha',
@@ -128,16 +129,20 @@ export default function RegistrationPage() {
     try {
       let presentationUrl: string | null = null
 
-      // Upload presentation file if provided - via server API for security
+      // Upload presentation file if provided - direct to Supabase Storage with progress
       if (presentationFile) {
         setIsUploading(true)
         setUploadProgress(0)
 
-        const formData = new FormData()
-        formData.append('file', presentationFile)
+        const fileExt = presentationFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        // Upload via API route with XMLHttpRequest for progress tracking
-        const result = await new Promise<{ url: string }>((resolve, reject) => {
+        // Upload directly to Supabase Storage REST API with progress tracking
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        const uploadUrl = `${supabaseUrl}/storage/v1/object/presentations/${fileName}`
+
+        await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest()
 
           xhr.upload.onprogress = (e) => {
@@ -149,35 +154,28 @@ export default function RegistrationPage() {
 
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText)
-                if (response.success && response.url) {
-                  resolve({ url: response.url })
-                } else {
-                  reject(new Error(response.error || 'Upload selhal'))
-                }
-              } catch {
-                reject(new Error('Neplatná odpověď serveru'))
-              }
+              resolve()
             } else {
-              try {
-                const errorResponse = JSON.parse(xhr.responseText)
-                reject(new Error(errorResponse.error || 'Upload selhal'))
-              } catch {
-                reject(new Error('Upload selhal: ' + xhr.status))
-              }
+              reject(new Error('Upload selhal: ' + xhr.status + ' ' + xhr.responseText))
             }
           }
 
           xhr.onerror = () => reject(new Error('Chyba sítě při nahrávání'))
           xhr.ontimeout = () => reject(new Error('Upload vypršel - zkuste menší soubor'))
 
-          xhr.open('POST', '/api/upload')
-          xhr.timeout = 300000 // 5 minut timeout pro velké soubory
-          xhr.send(formData)
+          xhr.open('POST', uploadUrl)
+          xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`)
+          xhr.setRequestHeader('Content-Type', presentationFile.type)
+          xhr.timeout = 300000 // 5 minut timeout
+          xhr.send(presentationFile)
         })
 
-        presentationUrl = result.url
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('presentations')
+          .getPublicUrl(fileName)
+
+        presentationUrl = urlData.publicUrl
         setIsUploading(false)
         setUploadProgress(100)
       }
